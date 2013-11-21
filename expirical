@@ -1,0 +1,100 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'whois'
+require 'icalendar'
+require 'date'
+
+include Icalendar
+
+@verbose = false
+
+def lookup(whois, domain)
+  record = whois.lookup(domain)
+  $stderr.puts record.properties if @verbose
+  expires = record.expires_on
+  if (expires)
+    $stderr.puts "Domain '#{domain}' expires on #{expires}"
+  else
+    $stderr.puts "Unable to get expiry date for '#{domain}' domain"
+  end
+
+  expires
+end
+
+def load_domains(filename)
+  $stderr.puts "Loading domains from #{filename}" if @verbose
+  domains = []
+  File.readlines(filename).each do |line|
+    domains << line.chomp
+  end
+
+  domains
+end
+
+def lookup_domains(domains)
+  $stderr.puts "Processing #{domains.size} domains" if @verbose
+  whois = Whois::Client.new
+  expiries = {}
+  domains.each do |domain|
+    begin
+      expires = lookup(whois, domain)
+      expiries[domain] = expires if expires
+    rescue => e
+      $stderr.puts "Caught error #{e} looking up '#{domain}' domain"
+    end
+  end
+
+  expiries
+end
+
+def create_calendar(expiries)
+  cal = Calendar.new
+
+  expiries.each_pair do |domain, expires|
+    $stderr.puts "Adding calendar event for domain #{domain} expiring on #{expires}" if @verbose
+    summary = "Domain name #{domain} expires"
+    cal.event do
+      dtstart   expires.to_date
+      dtend     expires.to_date + 1
+      summary   summary
+      alarm do
+        action     "DISPLAY"
+        summary    summary
+        trigger    "-PT15H" # 9AM the day before
+      end
+    end
+  end
+
+  cal
+end
+
+def main(filename)
+  domains = load_domains(filename)
+  expiries = lookup_domains(domains)
+  cal = create_calendar(expiries)
+  puts cal.to_ical
+end
+
+options = {}
+opts_parser = OptionParser.new do |opts|
+  opts.banner = "Usage: expirical [options] <domain name file>"
+  opts.separator ""
+  opts.on("-v", "--verbose", "Verbose output") do
+    @verbose = true
+  end
+end
+opts_parser.parse!
+
+if ARGV.empty?
+  puts opts_parser.help
+  exit 1
+end
+
+filename = ARGV[0]
+if (!File.exist?(filename))
+  $stderr.puts "Unable to read file #{filename}"
+  exit
+end
+
+main(filename)

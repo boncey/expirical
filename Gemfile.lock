@@ -1,0 +1,12 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ical (0.0.13)
+    whois (3.4.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  ical
+  whois
