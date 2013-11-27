@@ -34,15 +34,21 @@ end
 
 def lookup_domains(domains)
   $stderr.puts "Processing #{domains.size} domains" if @verbose
-  whois = Whois::Client.new
+  whois = Whois::Client.new(:timeout => 20)
   expiries = {}
   domains.each do |domain|
-    begin
-      expires = lookup(whois, domain)
-      expiries[domain] = expires if expires
-    rescue => e
-      $stderr.puts "Caught error #{e} looking up '#{domain}' domain"
+    (1..3).each do |attempt|
+      begin
+        expires = lookup(whois, domain)
+        expiries[domain] = expires if expires
+        break
+      rescue => e
+        $stderr.puts "Caught error '#{e}' looking up '#{domain}' domain on attempt #{attempt}"
+        $stderr.puts e.backtrace
+      end
     end
+
+    sleep 5
   end
 
   expiries
