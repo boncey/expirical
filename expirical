@@ -26,7 +26,7 @@ def load_domains(filename)
   $stderr.puts "Loading domains from #{filename}" if @verbose
   domains = []
   File.readlines(filename).each do |line|
-    domains << line.chomp
+    domains << line.chomp if !line.chomp.start_with?("#")
   end
 
   domains
