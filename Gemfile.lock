@@ -2,7 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     ical (0.0.13)
-    whois (3.4.2)
+    whois (3.4.4)
 
 PLATFORMS
   ruby
