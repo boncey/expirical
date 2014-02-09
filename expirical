@@ -11,19 +11,19 @@ include Icalendar
 
 def lookup(whois, domain)
   record = whois.lookup(domain)
-  $stderr.puts record.properties if @verbose
+  $stderr.puts(record.properties) if @verbose
   expires = record.expires_on
   if (expires)
-    $stderr.puts "Domain '#{domain}' expires on #{expires}"
+    $stderr.puts("Domain '#{domain}' expires on #{expires}")
   else
-    $stderr.puts "Unable to get expiry date for '#{domain}' domain"
+    $stderr.puts("Unable to get expiry date for '#{domain}' domain")
   end
 
   expires
 end
 
 def load_domains(filename)
-  $stderr.puts "Loading domains from #{filename}" if @verbose
+  $stderr.puts("Loading domains from #{filename}") if @verbose
   domains = []
   File.readlines(filename).each do |line|
     domains << line.chomp if !line.chomp.start_with?("#")
@@ -33,18 +33,21 @@ def load_domains(filename)
 end
 
 def lookup_domains(domains)
-  $stderr.puts "Processing #{domains.size} domains" if @verbose
+  $stderr.puts("Processing #{domains.size} domains") if @verbose
   whois = Whois::Client.new(:timeout => 20)
   expiries = {}
   domains.each do |domain|
-    (1..3).each do |attempt|
-      begin
-        expires = lookup(whois, domain)
-        expiries[domain] = expires if expires
-        break
-      rescue => e
-        $stderr.puts "Caught error '#{e}' looking up '#{domain}' domain on attempt #{attempt}"
-        $stderr.puts e.backtrace
+    begin
+      tries ||= 0
+      expires = lookup(whois, domain)
+      expiries[domain] = expires if expires
+    rescue => e
+      if (tries += 1) < 3
+        $stderr.puts("Caught error #{e.class} (#{e}) looking up '#{domain}' domain. Attempt #{tries}, retrying...")
+        sleep 5
+        retry
+      else
+        $stderr.puts("Caught error #{e.class} (#{e}) looking up '#{domain}' domain.")
       end
     end
 
@@ -58,7 +61,7 @@ def create_calendar(expiries)
   cal = Calendar.new
 
   expiries.each_pair do |domain, expires|
-    $stderr.puts "Adding calendar event for domain #{domain} expiring on #{expires}" if @verbose
+    $stderr.puts("Adding calendar event for domain #{domain} expiring on #{expires}") if @verbose
     summary = "Domain name #{domain} expires"
     cal.event do
       dtstart   expires.to_date
@@ -79,7 +82,7 @@ def main(filename)
   domains = load_domains(filename)
   expiries = lookup_domains(domains)
   cal = create_calendar(expiries)
-  puts cal.to_ical
+  puts(cal.to_ical)
 end
 
 options = {}
@@ -93,13 +96,13 @@ end
 opts_parser.parse!
 
 if ARGV.empty?
-  puts opts_parser.help
+  puts(opts_parser.help)
   exit 1
 end
 
 filename = ARGV[0]
 if (!File.exist?(filename))
-  $stderr.puts "Unable to read file #{filename}"
+  $stderr.puts("Unable to read file #{filename}")
   exit
 end
 
