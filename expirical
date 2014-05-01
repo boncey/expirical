@@ -14,7 +14,7 @@ def lookup(whois, domain)
   $stderr.puts(record.properties) if @verbose
   expires = record.expires_on
   if (expires)
-    $stderr.puts("Domain '#{domain}' expires on #{expires}")
+    $stderr.puts("Domain '#{domain}' expires on #{expires}") if @verbose
   else
     $stderr.puts("Unable to get expiry date for '#{domain}' domain")
   end
@@ -42,12 +42,13 @@ def lookup_domains(domains)
       expires = lookup(whois, domain)
       expiries[domain] = expires if expires
     rescue => e
+      message = e.to_s.split[0...10].join(' ')
       if (tries += 1) < 3
-        $stderr.puts("Caught error #{e.class} (#{e}) looking up '#{domain}' domain. Attempt #{tries}, retrying...")
+        $stderr.puts("Caught error #{e.class} (#{message}) looking up '#{domain}' domain. Attempt #{tries}, retrying...") if @verbose
         sleep 5
         retry
       else
-        $stderr.puts("Caught error #{e.class} (#{e}) looking up '#{domain}' domain.")
+        $stderr.puts("Caught error #{e.class} (#{message}) looking up '#{domain}' domain.")
       end
     end
 
